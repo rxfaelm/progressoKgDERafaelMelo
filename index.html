@@ -179,6 +179,17 @@
             margin-top: 10px;
             box-shadow: 0 5px 15px rgba(74, 144, 226, 0.2);
         }
+        .history-diff {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+    margin-left: 8px;
+    display: inline-block;
+}
+.hist-good { background: #e8fcf0; color: #2ecc71; }
+.hist-bad { background: #fff0f0; color: #e74c3c; }
+.hist-neutral { background: #f1f2f6; color: #7f8c8d; }
     </style>
 </head>
 <body>
@@ -210,91 +221,122 @@
 
     <script>
         // CONFIGURAÇÃO DIRETA DO SUPABASE
+        // Sua URL e Chave Anon que você forneceu
         const supabaseUrl = 'https://dncdeeywbbnaagluxsar.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRuY2RlZXl3YmJuYWFnbHV4c2FyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwNTkxNDgsImV4cCI6MjA4MzYzNTE0OH0.83HYuAYcsTBamEMp6otEvhef3clBsSeijLRasCYf8IQ';
+        
+        // Inicializa o cliente do Supabase
         const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
-
+    
         let entries = [];
+    
+        // Define a data padrão do input como "hoje"
         document.getElementById('reg-date').valueAsDate = new Date();
-
+    
+        // Função para abrir/fechar o modal
         function toggleModal(show) {
             document.getElementById('modal').style.display = show ? 'flex' : 'none';
         }
-
+    
+        // BUSCAR DADOS (DIRETO DO SUPABASE)
         async function carregarDadosDoBanco() {
-            // Busca direto no Supabase sem passar por servidor local
-            const { data, error } = await _supabase
-                .from('registros')
-                .select('*')
-                .order('data', { ascending: false })
-                .order('id', { ascending: false });
-
-            if (error) {
-                console.error("Erro ao buscar:", error);
-                return;
+            try {
+                const { data, error } = await _supabase
+                    .from('registros')
+                    .select('*')
+                    .order('data', { ascending: false })
+                    .order('id', { ascending: false });
+    
+                if (error) throw error;
+    
+                entries = data.map(item => ({
+                    id: item.id,
+                    weight: parseFloat(item.peso),
+                    date: item.data.split('-').reverse().join('/')
+                }));
+    
+                updateUI();
+            } catch (erro) {
+                console.error("Erro ao carregar dados:", erro);
             }
-
-            entries = data.map(item => ({
-                id: item.id,
-                weight: parseFloat(item.peso),
-                date: item.data.split('-').reverse().join('/')
-            }));
-            updateUI();
         }
-
+    
+        // SALVAR DADOS (DIRETO NO SUPABASE)
         async function saveEntry() {
-            const weight = parseFloat(document.getElementById('reg-weight').value);
-            const date = document.getElementById('reg-date').value;
-            if(!weight || !date) return alert("Preencha tudo!");
-
-            const { error } = await _supabase
-                .from('registros')
-                .insert([{ peso: weight, data: date, foco: 'ganhar' }]);
-
-            if (!error) {
+            const weightInput = document.getElementById('reg-weight');
+            const dateInput = document.getElementById('reg-date');
+            
+            const weight = parseFloat(weightInput.value);
+            const date = dateInput.value;
+    
+            if(!weight || !date) return alert("Por favor, preencha o peso e a data!");
+    
+            try {
+                const { error } = await _supabase
+                    .from('registros')
+                    .insert([{ 
+                        peso: weight, 
+                        data: date, 
+                        foco: 'ganhar' // Foco fixo em ganhar peso
+                    }]);
+    
+                if (error) throw error;
+    
                 await carregarDadosDoBanco();
                 toggleModal(false);
-                document.getElementById('reg-weight').value = "";
-            } else {
-                alert("Erro ao salvar: " + error.message);
+                weightInput.value = "";
+            } catch (erro) {
+                alert("Erro ao salvar: " + erro.message);
             }
         }
-
+    
+        // DELETAR DADOS (DIRETO NO SUPABASE)
         async function deleteEntry(id) {
-            if (!confirm("Excluir este registro?")) return;
-            const { error } = await _supabase
-                .from('registros')
-                .delete()
-                .eq('id', id);
-
-            if (!error) await carregarDadosDoBanco();
+            if (!confirm("Tem certeza que deseja excluir este registro?")) return;
+    
+            try {
+                const { error } = await _supabase
+                    .from('registros')
+                    .delete()
+                    .eq('id', id);
+    
+                if (error) throw error;
+    
+                await carregarDadosDoBanco();
+            } catch (erro) {
+                alert("Erro ao excluir: " + erro.message);
+            }
         }
-
+    
+        // ATUALIZAR INTERFACE (UI)
         function updateUI() {
             const badge = document.getElementById('diff-badge');
             const logsContainer = document.getElementById('logs');
             const weightEl = document.getElementById('current-weight');
-
+    
             if (entries.length === 0) {
                 weightEl.innerText = "--";
                 badge.innerText = "Nenhum dado encontrado.";
                 badge.className = "diff-badge status-neutral";
+                logsContainer.innerHTML = "";
                 return;
             }
-
+    
+            // Peso mais recente (Topo)
             const latest = entries[0].weight;
             weightEl.innerText = latest.toFixed(1);
-
+    
+            // Badge principal do topo
             if (entries.length > 1) {
-                const previous = entries[1].weight;
-                const diff = latest - previous;
-                const diffFixed = Math.abs(diff).toFixed(1);
-
+                const previousWeight = entries[1].weight;
+                const diff = latest - previousWeight;
+                const diffAbs = Math.abs(diff).toFixed(1);
+    
                 if (diff > 0) {
-                    badge.innerHTML = `<i class="fas fa-arrow-up"></i> Ganhou ${diffFixed}kg`;
+                    badge.innerHTML = `<i class="fas fa-arrow-up"></i> Ganhou ${diffAbs}kg`;
                     badge.className = "diff-badge status-good";
                 } else if (diff < 0) {
-                    badge.innerHTML = `<i class="fas fa-arrow-down"></i> Perdeu ${diffFixed}kg`;
+                    badge.innerHTML = `<i class="fas fa-arrow-down"></i> Perdeu ${diffAbs}kg`;
                     badge.className = "diff-badge status-bad";
                 } else {
                     badge.innerText = "Manteve o peso";
@@ -304,18 +346,41 @@
                 badge.innerText = "Primeira pesagem!";
                 badge.className = "diff-badge status-neutral";
             }
-
-            logsContainer.innerHTML = entries.map(e => `
-                <div class="history-item">
-                    <div>
-                        <strong style="font-size: 17px; color: #2d3436;">${e.weight.toFixed(1)}kg</strong><br>
-                        <small style="color: #b2bec3;">${e.date}</small>
+    
+            // Renderizar Histórico com tags de diferença por linha
+            logsContainer.innerHTML = entries.map((e, index) => {
+                let diffHtml = "";
+                
+                // Compara com o item seguinte (mais antigo)
+                if (index < entries.length - 1) {
+                    const prev = entries[index + 1].weight;
+                    const d = e.weight - prev;
+                    const dAbs = Math.abs(d).toFixed(1);
+    
+                    if (d > 0) {
+                        diffHtml = `<span class="history-diff hist-good">+${dAbs}kg</span>`;
+                    } else if (d < 0) {
+                        diffHtml = `<span class="history-diff hist-bad">-${dAbs}kg</span>`;
+                    } else {
+                        diffHtml = `<span class="history-diff hist-neutral">=</span>`;
+                    }
+                }
+    
+                return `
+                    <div class="history-item">
+                        <div>
+                            <strong style="font-size: 17px; color: #2d3436;">${e.weight.toFixed(1)}kg</strong>
+                            ${diffHtml}
+                            <br>
+                            <small style="color: #b2bec3;">${e.date}</small>
+                        </div>
+                        <i class="fas fa-trash-alt" style="color: #fab1a0; cursor: pointer; padding: 10px;" onclick="deleteEntry(${e.id})"></i>
                     </div>
-                    <i class="fas fa-trash-alt" style="color: #fab1a0; cursor: pointer; padding: 10px;" onclick="deleteEntry(${e.id})"></i>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
-
+    
+        // Inicializa o app carregando os dados
         window.onload = carregarDadosDoBanco;
     </script>
 </body>
