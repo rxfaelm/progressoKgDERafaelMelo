@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Progresso Rafael Melo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        :root { --primary: #4a90e2; --good: #2ecc71; --bad: #e74c3c; --bg: #f8f9fa; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg); margin: 0; padding: 20px 10px; display: flex; flex-direction: column; align-items: center; }
+        
+        .h1 {
+            font-size: 22px; font-weight: 800; text-align: center; margin: 20px 0 30px 0;
+            letter-spacing: 1px; text-transform: uppercase;
+            background: linear-gradient(to right, #4a90e2, #2ecc71);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            position: relative; padding-bottom: 10px; width: 100%;
+        }
+        .h1::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 40px; height: 3px; background: linear-gradient(to right, #4a90e2, #2ecc71); border-radius: 2px; }
+
+        .container { width: 100%; max-width: 450px; }
+        .card { background: white; padding: 30px 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center; margin-bottom: 25px; }
+        .weight-display { font-size: 56px; font-weight: 800; color: #2d3436; margin: 10px 0; }
+        .diff-badge { padding: 10px 18px; border-radius: 50px; font-size: 15px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; }
+        .status-good { background: #e8fcf0; color: var(--good); }
+        .status-bad { background: #fff0f0; color: var(--bad); }
+        .status-neutral { background: #f1f2f6; color: #7f8c8d; }
+        .history-list { background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.03); }
+        .history-item { display: flex; justify-content: space-between; align-items: center; padding: 18px 20px; border-bottom: 1px solid #f1f2f6; }
+        .history-item:last-child { border: none; }
+        
+        .btn-add { background: var(--primary); color: white; border: none; width: 60px; height: 60px; border-radius: 30px; font-size: 24px; cursor: pointer; position: fixed; bottom: 30px; right: 25px; box-shadow: 0 8px 20px rgba(74, 144, 226, 0.4); display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
+        .btn-add:active { transform: scale(0.9); }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); justify-content: center; align-items: flex-end; }
+        .modal-content { background: white; padding: 30px; border-radius: 25px 25px 0 0; width: 100%; max-width: 500px; animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        input { width: 100%; padding: 15px; margin: 12px 0; border: 2px solid #eee; border-radius: 12px; font-size: 16px; outline: none; }
+        .btn-save { width: 100%; background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="h1">PROGRESSO DE RAFAEL MELO</div>
+
+        <div class="card">
+            <small style="color: #a0a0a0; font-weight: 600;">PESO ATUAL</small>
+            <div class="weight-display"><span id="current-weight">--</span><small style="font-size: 24px; margin-left: 4px;">kg</small></div>
+            <div id="diff-badge" class="diff-badge status-neutral">Sincronizando...</div>
+        </div>
+
+        <h3 style="color: #2d3436; margin: 10px 0 15px 10px; font-size: 18px;">Histórico Recente</h3>
+        <div id="logs" class="history-list"></div>
+    </div>
+
+    <button class="btn-add" onclick="toggleModal(true)"><i class="fas fa-plus"></i></button>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-top: 0; color: #2d3436;">Adicionar Pesagem</h3>
+            <input type="number" id="reg-weight" step="0.1" placeholder="Peso (kg)" inputmode="decimal">
+            <input type="date" id="reg-date">
+            <button class="btn-save" onclick="saveEntry()">Confirmar</button>
+            <button onclick="toggleModal(false)" style="background:none; border:none; color:#999; width:100%; margin-top:15px; cursor:pointer; font-weight:600;">Fechar</button>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURAÇÃO DIRETA DO SUPABASE
+        const supabaseUrl = 'https://dncdeeywbbnaagluxsar.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRuY2RlZXl3YmJuYWFnbHV4c2FyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwNTkxNDgsImV4cCI6MjA4MzYzNTE0OH0.83HYuAYcsTBamEMp6otEvhef3clBsSeijLRasCYf8IQ';
+        const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+        let entries = [];
+        document.getElementById('reg-date').valueAsDate = new Date();
+
+        function toggleModal(show) {
+            document.getElementById('modal').style.display = show ? 'flex' : 'none';
+        }
+
+        async function carregarDadosDoBanco() {
+            // Busca direto no Supabase sem passar por servidor local
+            const { data, error } = await _supabase
+                .from('registros')
+                .select('*')
+                .order('data', { ascending: false })
+                .order('id', { ascending: false });
+
+            if (error) {
+                console.error("Erro ao buscar:", error);
+                return;
+            }
+
+            entries = data.map(item => ({
+                id: item.id,
+                weight: parseFloat(item.peso),
+                date: item.data.split('-').reverse().join('/')
+            }));
+            updateUI();
+        }
+
+        async function saveEntry() {
+            const weight = parseFloat(document.getElementById('reg-weight').value);
+            const date = document.getElementById('reg-date').value;
+            if(!weight || !date) return alert("Preencha tudo!");
+
+            const { error } = await _supabase
+                .from('registros')
+                .insert([{ peso: weight, data: date, foco: 'ganhar' }]);
+
+            if (!error) {
+                await carregarDadosDoBanco();
+                toggleModal(false);
+                document.getElementById('reg-weight').value = "";
+            } else {
+                alert("Erro ao salvar: " + error.message);
+            }
+        }
+
+        async function deleteEntry(id) {
+            if (!confirm("Excluir este registro?")) return;
+            const { error } = await _supabase
+                .from('registros')
+                .delete()
+                .eq('id', id);
+
+            if (!error) await carregarDadosDoBanco();
+        }
+
+        function updateUI() {
+            const badge = document.getElementById('diff-badge');
+            const logsContainer = document.getElementById('logs');
+            const weightEl = document.getElementById('current-weight');
+
+            if (entries.length === 0) {
+                weightEl.innerText = "--";
+                badge.innerText = "Nenhum dado encontrado.";
+                badge.className = "diff-badge status-neutral";
+                return;
+            }
+
+            const latest = entries[0].weight;
+            weightEl.innerText = latest.toFixed(1);
+
+            if (entries.length > 1) {
+                const previous = entries[1].weight;
+                const diff = latest - previous;
+                const diffFixed = Math.abs(diff).toFixed(1);
+
+                if (diff > 0) {
+                    badge.innerHTML = `<i class="fas fa-arrow-up"></i> Ganhou ${diffFixed}kg`;
+                    badge.className = "diff-badge status-good";
+                } else if (diff < 0) {
+                    badge.innerHTML = `<i class="fas fa-arrow-down"></i> Perdeu ${diffFixed}kg`;
+                    badge.className = "diff-badge status-bad";
+                } else {
+                    badge.innerText = "Manteve o peso";
+                    badge.className = "diff-badge status-neutral";
+                }
+            } else {
+                badge.innerText = "Primeira pesagem!";
+                badge.className = "diff-badge status-neutral";
+            }
+
+            logsContainer.innerHTML = entries.map(e => `
+                <div class="history-item">
+                    <div>
+                        <strong style="font-size: 17px; color: #2d3436;">${e.weight.toFixed(1)}kg</strong><br>
+                        <small style="color: #b2bec3;">${e.date}</small>
+                    </div>
+                    <i class="fas fa-trash-alt" style="color: #fab1a0; cursor: pointer; padding: 10px;" onclick="deleteEntry(${e.id})"></i>
+                </div>
+            `).join('');
+        }
+
+        window.onload = carregarDadosDoBanco;
+    </script>
+</body>
+</html>
