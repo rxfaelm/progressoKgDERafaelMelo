@@ -9,89 +9,49 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         :root { --primary: #4a90e2; --good: #2ecc71; --bad: #e74c3c; --bg: #f8f9fa; --text: #2d3436; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Poppins', sans-serif; }
         body { background: var(--bg); margin: 0; padding: 20px 10px; display: flex; flex-direction: column; align-items: center; color: var(--text); }
         
-        /* Animação do Gradiente */
-        @keyframes gradientMove {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
+        @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
 
-        .header-section { width: 100%; text-align: center; margin-bottom: 30px; }
-
-        .h1 {
-            font-size: 30px; 
-            font-weight: 800; 
-            text-align: center; 
-            margin: 20px 0 5px 0;
-            letter-spacing: 1px; 
-            text-transform: uppercase;
-            background: linear-gradient(-45deg, #4a90e2, #2ecc71, #4a90e2, #2ecc71);
-            background-size: 300% 300%;
-            animation: gradientMove 4s ease infinite;
-            -webkit-background-clip: text; 
-            -webkit-text-fill-color: transparent;
-            position: relative;
-            display: inline-block;
-        }
-
-        .h1::after { 
-            content: ''; 
-            position: absolute; 
-            bottom: -8px; 
-            left: 50%; 
-            transform: translateX(-50%); 
-            width: 60px; 
-            height: 4px; 
-            background: linear-gradient(-45deg, #4a90e2, #2ecc71, #4a90e2, #2ecc71);
-            background-size: 300% 300%;
-            animation: gradientMove 4s ease infinite;
-            border-radius: 10px; 
-        }
-
-        .subtitle {
-            font-size: 12px;
-            color: #a0a0a0;
-            margin-top: 15px;
-            font-weight: 500;
-        }
-
-        .subtitle a {
-            color: var(--primary);
-            text-decoration: none;
-            font-weight: 700;
-        }
+        .header-section { width: 100%; text-align: center; margin-bottom: 20px; }
+        .h1 { font-size: 20px; font-weight: 800; margin: 20px 0 5px 0; letter-spacing: 1px; text-transform: uppercase; background: linear-gradient(-45deg, #4a90e2, #2ecc71, #4a90e2, #2ecc71); background-size: 300% 300%; animation: gradientMove 4s ease infinite; -webkit-background-clip: text; -webkit-text-fill-color: transparent; position: relative; display: inline-block; }
+        .h1::after { content: ''; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); width: 60px; height: 4px; background: linear-gradient(-45deg, #4a90e2, #2ecc71, #4a90e2, #2ecc71); background-size: 300% 300%; animation: gradientMove 4s ease infinite; border-radius: 10px; }
+        .subtitle { font-size: 11px; color: #a0a0a0; margin-top: 15px; }
+        .subtitle a { color: var(--primary); text-decoration: none; font-weight: 700; }
 
         .container { width: 100%; max-width: 450px; }
-        .card { background: white; padding: 35px 20px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); text-align: center; margin-bottom: 25px; }
-        .weight-display { font-size: 60px; font-weight: 800; color: var(--text); margin: 5px 0; letter-spacing: -2px; }
+        .card { background: white; padding: 25px 20px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); text-align: center; margin-bottom: 20px; }
         
-        .diff-badge { padding: 12px 20px; border-radius: 50px; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
+        /* Dashboard Styles */
+        .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .dash-item { background: white; padding: 15px; border-radius: 20px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.02); }
+        .dash-label { font-size: 10px; color: #a0a0a0; font-weight: 600; text-transform: uppercase; display: block; }
+        .dash-value { font-size: 16px; font-weight: 800; margin-top: 5px; display: block; }
+
+        .chart-container { background: white; padding: 20px; border-radius: 24px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); }
+
+        /* Histórico Expansível */
+        .history-list { background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 5px 20px rgba(0,0,0,0.02); }
+        .history-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid #f8f9fa; }
+        .btn-expand { width: 100%; padding: 15px; background: none; border: none; color: var(--primary); font-weight: 700; font-size: 13px; cursor: pointer; border-top: 1px solid #f8f9fa; }
+
+        .weight-display { font-size: 48px; font-weight: 800; color: var(--text); margin: 5px 0; letter-spacing: -1px; }
+        .diff-badge { padding: 8px 16px; border-radius: 50px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; }
         .status-good { background: #e8fcf0; color: var(--good); }
         .status-bad { background: #fff0f0; color: var(--bad); }
         .status-neutral { background: #f1f2f6; color: #7f8c8d; }
 
-        .history-list { background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 5px 20px rgba(0,0,0,0.02); }
-        .history-item { display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid #f8f9fa; }
-        
-        .history-diff { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; margin-left: 8px; display: inline-block; }
-        .hist-good { background: #e8fcf0; color: #2ecc71; }
-        .hist-bad { background: #fff0f0; color: #e74c3c; }
-        .hist-neutral { background: #f1f2f6; color: #7f8c8d; }
-
-        .btn-add { background: var(--primary); color: white; border: none; width: 65px; height: 65px; border-radius: 50%; font-size: 28px; cursor: pointer; position: fixed; bottom: 30px; right: 25px; box-shadow: 0 10px 25px rgba(74, 144, 226, 0.4); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        .btn-add { background: var(--primary); color: white; border: none; width: 60px; height: 60px; border-radius: 50%; font-size: 24px; cursor: pointer; position: fixed; bottom: 20px; right: 20px; box-shadow: 0 10px 25px rgba(74, 144, 226, 0.4); display: flex; align-items: center; justify-content: center; z-index: 100; }
         
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); justify-content: center; align-items: flex-end; z-index: 1000; }
-        .modal-content { background: white; padding: 35px 30px; border-radius: 30px 30px 0 0; width: 100%; max-width: 500px; animation: slideUp 0.4s ease-out; }
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-
-        input { width: 100%; padding: 16px; margin: 12px 0; border: 2px solid #f1f2f6; border-radius: 15px; font-size: 16px; outline: none; background: #f8f9fa; }
-        .btn-save { width: 100%; background: var(--primary); color: white; border: none; padding: 16px; border-radius: 15px; font-size: 16px; font-weight: 600; cursor: pointer; }
+        .modal-content { background: white; padding: 30px; border-radius: 30px 30px 0 0; width: 100%; max-width: 500px; animation: slideUp 0.3s ease-out; }
+        input { width: 100%; padding: 16px; margin: 10px 0; border: 2px solid #f1f2f6; border-radius: 15px; font-size: 16px; outline: none; }
+        .btn-save { width: 100%; background: var(--primary); color: white; border: none; padding: 16px; border-radius: 15px; font-size: 16px; font-weight: 600; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -104,11 +64,31 @@
 
         <div class="card">
             <small style="color: #a0a0a0; font-weight: 600;">PESO ATUAL</small>
-            <div class="weight-display"><span id="current-weight">--</span><small style="font-size: 24px;">kg</small></div>
+            <div class="weight-display"><span id="current-weight">--</span><small style="font-size: 18px;">kg</small></div>
             <div id="diff-badge" class="diff-badge status-neutral">Sincronizando...</div>
         </div>
-        <h3 style="margin: 10px 0 15px 10px; font-size: 18px;">Histórico Recente</h3>
-        <div id="logs" class="history-list"></div>
+
+        <div class="dash-grid">
+            <div class="dash-item">
+                <span class="dash-label">Última Semana</span>
+                <span id="week-diff" class="dash-value">--</span>
+            </div>
+            <div class="dash-item">
+                <span class="dash-label">Último Mês</span>
+                <span id="month-diff" class="dash-value">--</span>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="weightChart"></canvas>
+        </div>
+
+        <h3 style="margin: 20px 0 15px 10px; font-size: 16px; font-weight: 800;">Histórico Recente</h3>
+        <div class="history-list">
+            <div id="logs"></div>
+            <button id="btn-expand" class="btn-expand" onclick="toggleExpand()">Ver histórico completo</button>
+        </div>
+        <div style="height: 100px;"></div>
     </div>
 
     <button class="btn-add" onclick="toggleModal(true)"><i class="fas fa-plus"></i></button>
@@ -127,44 +107,97 @@
         const supabaseUrl = 'https://dncdeeywbbnaagluxsar.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRuY2RlZXl3YmJuYWFnbHV4c2FyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwNTkxNDgsImV4cCI6MjA4MzYzNTE0OH0.83HYuAYcsTBamEMp6otEvhef3clBsSeijLRasCYf8IQ';
         const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
-
-        // A senha "swift" em Base64
         const CHAVE_MESTRA = "c3dpZnQ="; 
 
         let entries = [];
+        let isExpanded = false;
+        let myChart = null;
+
         document.getElementById('reg-date').valueAsDate = new Date();
 
         function toggleModal(show) { document.getElementById('modal').style.display = show ? 'flex' : 'none'; }
+        function toggleExpand() { isExpanded = !isExpanded; updateUI(); }
 
         async function carregarDadosDoBanco() {
             try {
                 const { data, error } = await _supabase.from('registros').select('*').order('data', { ascending: false }).order('id', { ascending: false });
                 if (!error) {
-                    entries = data.map(item => ({ id: item.id, weight: parseFloat(item.peso), date: item.data.split('-').reverse().join('/') }));
+                    entries = data.map(item => ({ 
+                        id: item.id, 
+                        weight: parseFloat(item.peso), 
+                        date: item.data,
+                        dateDisplay: item.data.split('-').reverse().join('/') 
+                    }));
                     updateUI();
+                    renderChart();
                 }
             } catch (e) { console.error(e); }
+        }
+
+        function calculateDiff(days) {
+            if (entries.length < 2) return "--";
+            const now = new Date();
+            const pastDate = new Date();
+            pastDate.setDate(now.getDate() - days);
+
+            const latest = entries[0].weight;
+            const pastEntry = entries.find(e => new Date(e.date) <= pastDate) || entries[entries.length - 1];
+            
+            const diff = latest - pastEntry.weight;
+            const color = diff > 0 ? "#2ecc71" : (diff < 0 ? "#e74c3c" : "#7f8c8d");
+            return `<span style="color: ${color}">${diff > 0 ? '+' : ''}${diff.toFixed(1)}kg</span>`;
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('weightChart').getContext('2d');
+            const chartData = [...entries].reverse().slice(-7); // Últimos 7 registros
+            
+            if (myChart) myChart.destroy();
+            
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartData.map(e => e.dateDisplay.substring(0, 5)),
+                    datasets: [{
+                        label: 'Peso (kg)',
+                        data: chartData.map(e => e.weight),
+                        borderColor: '#4a90e2',
+                        backgroundColor: 'rgba(74, 144, 226, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#4a90e2'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        y: { beginAtZero: false, grid: { display: false } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
         }
 
         async function saveEntry() {
             const w = parseFloat(document.getElementById('reg-weight').value);
             const d = document.getElementById('reg-date').value;
             if(!w || !d) return alert("Preencha os dados!");
-
-            const entrada = prompt("Digite a senha para salvar:");
-            if (!entrada) return;
-            if (btoa(entrada.trim().toLowerCase()) !== CHAVE_MESTRA) return alert("Senha incorreta!");
-
-            const { error } = await _supabase.from('registros').insert([{ peso: w, data: d, foco: 'ganhar' }]);
-            if (!error) { await carregarDadosDoBanco(); toggleModal(false); document.getElementById('reg-weight').value = ""; }
+            const entrada = prompt("Digite a senha:");
+            if (!entrada || btoa(entrada.trim().toLowerCase()) !== CHAVE_MESTRA) return alert("Senha incorreta!");
+            
+            await _supabase.from('registros').insert([{ peso: w, data: d, foco: 'ganhar' }]);
+            await carregarDadosDoBanco();
+            toggleModal(false);
+            document.getElementById('reg-weight').value = "";
         }
 
         async function deleteEntry(id) {
-            const entrada = prompt("Digite a senha para excluir:");
-            if (!entrada) return;
-            if (btoa(entrada.trim().toLowerCase()) !== CHAVE_MESTRA) return alert("Senha incorreta!");
-
-            if (confirm("Confirmar exclusão?")) {
+            const entrada = prompt("Digite a senha:");
+            if (!entrada || btoa(entrada.trim().toLowerCase()) !== CHAVE_MESTRA) return alert("Senha incorreta!");
+            if (confirm("Excluir?")) {
                 await _supabase.from('registros').delete().eq('id', id);
                 await carregarDadosDoBanco();
             }
@@ -174,25 +207,33 @@
             const weightEl = document.getElementById('current-weight');
             const badge = document.getElementById('diff-badge');
             const logs = document.getElementById('logs');
+            const btnExp = document.getElementById('btn-expand');
+            
             if (entries.length === 0) return;
 
             weightEl.innerText = entries[0].weight.toFixed(1);
-            if (entries.length > 1) {
-                const diff = entries[0].weight - entries[1].weight;
-                const abs = Math.abs(diff).toFixed(1);
-                badge.className = "diff-badge " + (diff > 0 ? "status-good" : (diff < 0 ? "status-bad" : "status-neutral"));
-                badge.innerHTML = diff > 0 ? `<i class="fas fa-arrow-up"></i> Ganhou ${abs}kg` : (diff < 0 ? `<i class="fas fa-arrow-down"></i> Perdeu ${abs}kg` : "Manteve");
-            }
+            document.getElementById('week-diff').innerHTML = calculateDiff(7);
+            document.getElementById('month-diff').innerHTML = calculateDiff(30);
 
-            logs.innerHTML = entries.map((e, i) => {
+            // Badge principal
+            const diff = entries.length > 1 ? entries[0].weight - entries[1].weight : 0;
+            badge.className = "diff-badge " + (diff > 0 ? "status-good" : (diff < 0 ? "status-bad" : "status-neutral"));
+            badge.innerHTML = diff > 0 ? `<i class="fas fa-arrow-up"></i> +${diff.toFixed(1)}kg` : (diff < 0 ? `<i class="fas fa-arrow-down"></i> ${diff.toFixed(1)}kg` : "Mantido");
+
+            // Lista Inteligente (Slice 3 ou Todos)
+            const displayEntries = isExpanded ? entries : entries.slice(0, 3);
+            btnExp.innerText = isExpanded ? "Recolher histórico" : "Ver histórico completo";
+            btnExp.style.display = entries.length <= 3 ? "none" : "block";
+
+            logs.innerHTML = displayEntries.map((e, i) => {
                 let diffTag = "";
-                if (i < entries.length - 1) {
-                    const d = e.weight - entries[i+1].weight;
+                const nextEntry = entries[entries.indexOf(e) + 1];
+                if (nextEntry) {
+                    const d = e.weight - nextEntry.weight;
                     const style = d > 0 ? "hist-good" : (d < 0 ? "hist-bad" : "hist-neutral");
-                    const txt = d > 0 ? `+${Math.abs(d).toFixed(1)}kg` : (d < 0 ? `-${Math.abs(d).toFixed(1)}kg` : "=");
-                    diffTag = `<span class="history-diff ${style}">${txt}</span>`;
+                    diffTag = `<span class="history-diff ${style}">${d > 0 ? '+' : ''}${d.toFixed(1)}kg</span>`;
                 }
-                return `<div class="history-item"><div><strong>${e.weight.toFixed(1)}kg</strong>${diffTag}<br><small style="color:#bbb">${e.date}</small></div><i class="fas fa-trash-alt" style="color:#fab1a0" onclick="deleteEntry(${e.id})"></i></div>`;
+                return `<div class="history-item"><div><strong>${e.weight.toFixed(1)}kg</strong>${diffTag}<br><small style="color:#bbb">${e.dateDisplay}</small></div><i class="fas fa-trash-alt" style="color:#fab1a0; cursor:pointer" onclick="deleteEntry(${e.id})"></i></div>`;
             }).join('');
         }
 
