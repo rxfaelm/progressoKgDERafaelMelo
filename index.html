@@ -27,7 +27,6 @@
         .container { width: 100%; max-width: 450px; }
         .card { background: white; padding: 25px 20px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); text-align: center; margin-bottom: 20px; }
         
-        /* Dashboard Styles */
         .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
         .dash-item { background: white; padding: 15px; border-radius: 20px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.02); }
         .dash-label { font-size: 10px; color: #a0a0a0; font-weight: 600; text-transform: uppercase; display: block; }
@@ -35,9 +34,16 @@
 
         .chart-container { background: white; padding: 20px; border-radius: 24px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); }
 
-        /* Histórico Expansível */
         .history-list { background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 5px 20px rgba(0,0,0,0.02); }
         .history-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid #f8f9fa; }
+        
+        /* CORREÇÃO DAS TAGS COLORIDAS */
+        .weight-row { display: flex; align-items: center; gap: 8px; }
+        .history-diff { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; display: inline-block; }
+        .hist-good { background: #e8fcf0; color: #2ecc71; }
+        .hist-bad { background: #fff0f0; color: #e74c3c; }
+        .hist-neutral { background: #f1f2f6; color: #7f8c8d; }
+
         .btn-expand { width: 100%; padding: 15px; background: none; border: none; color: var(--primary); font-weight: 700; font-size: 13px; cursor: pointer; border-top: 1px solid #f8f9fa; }
 
         .weight-display { font-size: 48px; font-weight: 800; color: var(--text); margin: 5px 0; letter-spacing: -1px; }
@@ -135,7 +141,7 @@
         }
 
         function calculateDiff(days) {
-            if (entries.length < 2) return "--";
+            if (entries.length < 1) return "--";
             const now = new Date();
             const pastDate = new Date();
             pastDate.setDate(now.getDate() - days);
@@ -150,34 +156,23 @@
 
         function renderChart() {
             const ctx = document.getElementById('weightChart').getContext('2d');
-            const chartData = [...entries].reverse().slice(-7); // Últimos 7 registros
-            
+            const chartData = [...entries].reverse().slice(-7);
             if (myChart) myChart.destroy();
-            
             myChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: chartData.map(e => e.dateDisplay.substring(0, 5)),
                     datasets: [{
-                        label: 'Peso (kg)',
                         data: chartData.map(e => e.weight),
                         borderColor: '#4a90e2',
                         backgroundColor: 'rgba(74, 144, 226, 0.1)',
                         borderWidth: 3,
                         fill: true,
                         tension: 0.4,
-                        pointRadius: 4,
-                        pointBackgroundColor: '#4a90e2'
+                        pointRadius: 4
                     }]
                 },
-                options: {
-                    responsive: true,
-                    plugins: { legend: { display: false } },
-                    scales: { 
-                        y: { beginAtZero: false, grid: { display: false } },
-                        x: { grid: { display: false } }
-                    }
-                }
+                options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: false }, x: { grid: { display: false } } } }
             });
         }
 
@@ -187,7 +182,6 @@
             if(!w || !d) return alert("Preencha os dados!");
             const entrada = prompt("Digite a senha:");
             if (!entrada || btoa(entrada.trim().toLowerCase()) !== CHAVE_MESTRA) return alert("Senha incorreta!");
-            
             await _supabase.from('registros').insert([{ peso: w, data: d, foco: 'ganhar' }]);
             await carregarDadosDoBanco();
             toggleModal(false);
@@ -215,25 +209,34 @@
             document.getElementById('week-diff').innerHTML = calculateDiff(7);
             document.getElementById('month-diff').innerHTML = calculateDiff(30);
 
-            // Badge principal
-            const diff = entries.length > 1 ? entries[0].weight - entries[1].weight : 0;
-            badge.className = "diff-badge " + (diff > 0 ? "status-good" : (diff < 0 ? "status-bad" : "status-neutral"));
-            badge.innerHTML = diff > 0 ? `<i class="fas fa-arrow-up"></i> +${diff.toFixed(1)}kg` : (diff < 0 ? `<i class="fas fa-arrow-down"></i> ${diff.toFixed(1)}kg` : "Mantido");
+            const diffTop = entries.length > 1 ? entries[0].weight - entries[1].weight : 0;
+            badge.className = "diff-badge " + (diffTop > 0 ? "status-good" : (diffTop < 0 ? "status-bad" : "status-neutral"));
+            badge.innerHTML = diffTop > 0 ? `<i class="fas fa-arrow-up"></i> +${diffTop.toFixed(1)}kg` : (diffTop < 0 ? `<i class="fas fa-arrow-down"></i> ${diffTop.toFixed(1)}kg` : "Mantido");
 
-            // Lista Inteligente (Slice 3 ou Todos)
             const displayEntries = isExpanded ? entries : entries.slice(0, 3);
             btnExp.innerText = isExpanded ? "Recolher histórico" : "Ver histórico completo";
             btnExp.style.display = entries.length <= 3 ? "none" : "block";
 
             logs.innerHTML = displayEntries.map((e, i) => {
                 let diffTag = "";
-                const nextEntry = entries[entries.indexOf(e) + 1];
+                const realIndex = entries.indexOf(e);
+                const nextEntry = entries[realIndex + 1];
                 if (nextEntry) {
                     const d = e.weight - nextEntry.weight;
                     const style = d > 0 ? "hist-good" : (d < 0 ? "hist-bad" : "hist-neutral");
                     diffTag = `<span class="history-diff ${style}">${d > 0 ? '+' : ''}${d.toFixed(1)}kg</span>`;
                 }
-                return `<div class="history-item"><div><strong>${e.weight.toFixed(1)}kg</strong>${diffTag}<br><small style="color:#bbb">${e.dateDisplay}</small></div><i class="fas fa-trash-alt" style="color:#fab1a0; cursor:pointer" onclick="deleteEntry(${e.id})"></i></div>`;
+                return `
+                    <div class="history-item">
+                        <div>
+                            <div class="weight-row">
+                                <strong>${e.weight.toFixed(1)}kg</strong>
+                                ${diffTag}
+                            </div>
+                            <small style="color:#bbb">${e.dateDisplay}</small>
+                        </div>
+                        <i class="fas fa-trash-alt" style="color:#fab1a0; cursor:pointer" onclick="deleteEntry(${e.id})"></i>
+                    </div>`;
             }).join('');
         }
 
